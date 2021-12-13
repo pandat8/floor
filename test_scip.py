@@ -14,6 +14,10 @@ random.seed(0)
 
 
 if __name__ == '__main__':
+	modes = ['sol-limit', 'time-limit']
+	mode = modes[0]
+	print('mode : ', mode)
+
 	result_directory = './results/HARD/'
 	pathlib.Path(result_directory).mkdir(parents=True, exist_ok=True)
 	instance_name = 'n200'
@@ -22,7 +26,7 @@ if __name__ == '__main__':
 	fp.readBlocks('./GSRCbench/HARD/' + instance_name + '.blocks')
 	fp.readPins('./GSRCbench/HARD/' + instance_name + '.pl')
 	fp.readNets('.//GSRCbench/HARD/' + instance_name + '.nets')
-	fp.ILP_floorplan_scip(instance_name=instance_name, result_directory=result_directory)
+	fp.ILP_floorplan_scip(instance_name=instance_name, result_directory=result_directory, mode=mode)
 
 	# fp.alpha = 0.5
 	# fp.init()
