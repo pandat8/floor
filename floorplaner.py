@@ -187,7 +187,7 @@ class FloorPlaner:
 		print('Bounding Box: '+str(self.ChipX)+','+str(self.ChipY))
 		print('cost_norm: '+str(self.getCost())+'\t cost: '+str(self.getCost(0)))
 
-	def ILP_floorplan(self, obj_type='area', instance_name='n', result_directory='./results/'):
+	def ILP_floorplan_cplex(self, obj_type='area', instance_name='n', result_directory='./results/', mode='sol-limit'):
 		WIDTH_REC = int((self.BlockArea / 0.5) ** 0.5)
 		HEIGHT_REC = WIDTH_REC
 
@@ -256,9 +256,16 @@ class FloorPlaner:
 		# -----------------------------------------------------------------------------
 
 		# Solve model
-		TIME_LIMIT = 600
+		if mode == 'sol-limit':
+			N_SOL_LIMIT = 1
+			mdl.parameters.mip.limits.solutions = N_SOL_LIMIT
+		elif mode == 'time-limit':
+			TIME_LIMIT = 7200
+			print('sovler time limit: ', TIME_LIMIT)
+			mdl.parameters.timelimit = TIME_LIMIT
+		# TIME_LIMIT = 3600
 		# N_SOL_LIMIT = 1
-		mdl.parameters.timelimit = TIME_LIMIT
+		# mdl.parameters.timelimit = TIME_LIMIT
 		# mdl.parameters.mip.limits.solutions = N_SOL_LIMIT
 
 		print('Cplex started...')
@@ -315,13 +322,13 @@ class FloorPlaner:
 			# ax.xaxis.set_major_locator(ticker.MultipleLocator(0.5))
 			# ax.yaxis.set_major_locator(ticker.MultipleLocator(0.5))
 			plt.margins(0)
-			plt.title( instance_name + ' cplex')
-			fig.savefig(result_directory + instance_name + "_cplex.png")
+			plt.title( instance_name + ' cplex ' + str(mdl.solve_details.time))
+			fig.savefig(result_directory + instance_name + '_cplex_' + mode + '.png')
 			plt.show()
 
 			print("Estimated width length: ", self.totalwirelength())
 
-	def ILP_floorplan_scip(self, obj_type='area', instance_name='n', result_directory='./results/'):
+	def ILP_floorplan_scip(self, obj_type='area', instance_name='n', result_directory='./results/', mode = 'sol-limit'):
 		WIDTH_REC = int((self.BlockArea / 0.5) ** 0.5)
 		HEIGHT_REC = WIDTH_REC
 
@@ -391,9 +398,17 @@ class FloorPlaner:
 
 		# Solve model
 
-		N_SOL_LIMIT = 1
+		if mode == 'sol-limit':
+			N_SOL_LIMIT = 1
+			model.setParam('limits/solutions', N_SOL_LIMIT)
+		elif mode == 'time-limit':
+			TIME_LIMIT = 7200
+			print('sovler time limit: ', TIME_LIMIT)
+			model.setParam('limits/time', TIME_LIMIT)
+
+		# N_SOL_LIMIT = 1
 		# TIME_LIMIT = 3600
-		model.setParam('limits/solutions', N_SOL_LIMIT)
+		# model.setParam('limits/solutions', N_SOL_LIMIT)
 		# model.setParam('limits/time', TIME_LIMIT)
 
 		print("SCIP started...")
@@ -450,23 +465,8 @@ class FloorPlaner:
 			# ax.xaxis.set_major_locator(ticker.MultipleLocator(0.5))
 			# ax.yaxis.set_major_locator(ticker.MultipleLocator(0.5))
 			plt.margins(0)
-			plt.title(instance_name + ' scip')
-			fig.savefig(result_directory + instance_name + "_scip.png")
+			plt.title(instance_name + ' scip ' + str(model.getSolvingTime()))
+			fig.savefig(result_directory + instance_name + '_scip_' + mode + '.png')
 			plt.show()
 
 			print("Estimated width length: ", self.totalwirelength())
-
-if __name__ == '__main__':
-	result_directory = './results/HARD/'
-	pathlib.Path(result_directory).mkdir(parents=True, exist_ok=True)
-	instance_name = 'n200'
-	print('case: hard ' + instance_name)
-	fp = FloorPlaner()
-	fp.readBlocks('./GSRCbench/HARD/' + instance_name + '.blocks')
-	fp.readPins('./GSRCbench/HARD/' + instance_name + '.pl')
-	fp.readNets('.//GSRCbench/HARD/' + instance_name + '.nets')
-	fp.ILP_floorplan_scip(instance_name=instance_name, result_directory=result_directory)
-
-	# fp.alpha = 0.5
-	# fp.init()
-	# fp.SA()
