@@ -24,17 +24,25 @@ class Block:
 
     def setX(self, x):
         self.x = x
-        self.t.x = x + (self.h/2 if self.r else self.w/2)
+        self.t.x = self.x + (self.h/2 if self.r else self.w/2)
 
     def setY(self, y):
         self.y = y
-        self.t.y = y + (self.w/2 if self.r else self.h/2)
+        self.t.y = self.y + (self.w/2 if self.r else self.h/2)
 
     def setWidth(self, w):
         self.w = w
+        self.t.x = self.x + (self.h / 2 if self.r else self.w / 2)
 
     def setHeight(self, h):
         self.h = h
+        self.t.y = self.y + (self.w / 2 if self.r else self.h / 2)
+
+    def setRotate(self, r):
+        self.r = r
+        self.t.x = self.x + (self.h / 2 if self.r else self.w / 2)
+        self.t.y = self.y + (self.w / 2 if self.r else self.h / 2)
+
 
 
 class SoftBlock(Block):

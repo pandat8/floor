@@ -4,10 +4,15 @@ import random
 import time
 from netlist import Terminal, Block, SoftBlock, Net
 from Tree import Tree
+import pyscipopt
 from pyscipopt import Model as SCIP_Model
 from docplex.mp.model import Model
 import pathlib
 import numpy as np
+
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+from matplotlib.patches import Polygon
 
 random.seed(0)
 
@@ -92,6 +97,12 @@ class FloorPlaner:
 				terminal = self.TerminalDic[terminal_name]
 				terminal.setX(int(line[1]))
 				terminal.setY(int(line[2]))
+			elif line[0][0] == 's':
+				block_name = line[0]
+				block = self.BlockDic[block_name]
+				block.setX(int(line[1]))
+				block.setY(int(line[2]))
+
 
 	def readNets(self, filename):
 		with open(filename) as f:
@@ -137,6 +148,57 @@ class FloorPlaner:
 		for n in self.NetList:
 			wirelen += n.wirelength()
 		return wirelen
+
+	def totalheight(self):
+		H  = 0
+		for b in self.BlockList:
+			if b.r:
+				H = np.maximum(H, b.y + b.w)
+			else:
+				H = np.maximum(H, b.y + b.h)
+		return H
+
+	def plot_floorplan(self, instance_name='n', result_directory='./results/', mode = 'sol-limit', solve_time=0):
+		WIDTH_REC = int((self.BlockArea / 0.5) ** 0.5)
+		HEIGHT_REC = WIDTH_REC
+		Enlarge_Fac = 1.0
+		# Plot external square
+		print("Plotting squares....")
+		fig, ax = plt.subplots()
+		# plt.plot((0, 0), (0, HEIGHT_REC/Enlarge_Fac), (WIDTH_REC/Enlarge_Fac, HEIGHT_REC/Enlarge_Fac), (WIDTH_REC/Enlarge_Fac, 0))
+		plt.xlim((0, WIDTH_REC / Enlarge_Fac))
+		plt.ylim((0, HEIGHT_REC / Enlarge_Fac))
+
+		TOTAL_HEIGHT = self.totalheight()
+		print("Total Area is {}".format(TOTAL_HEIGHT * WIDTH_REC / Enlarge_Fac / Enlarge_Fac))
+		print("BlockArea is {}".format(self.BlockArea))
+		print('')
+		n_blocks = len(self.BlockList)
+
+		for i in range(n_blocks):
+			# Display square i
+			if self.BlockList[i].r:
+
+				# exchange block width and height if rotate
+				# w = self.BlockList[i].w
+				# self.BlockList[i].setWidth(self.BlockList[i].h)
+				# self.BlockList[i].setHeight(w)
+
+				sx1, sx2, sy1, sy2 = self.BlockList[i].x, self.BlockList[i].x + self.BlockList[i].h, self.BlockList[i].y, self.BlockList[i].y + self.BlockList[i].w
+			else:
+				sx1, sx2, sy1, sy2 = self.BlockList[i].x, self.BlockList[i].x + self.BlockList[i].w, self.BlockList[i].y, self.BlockList[i].y + self.BlockList[i].h
+
+			sx1, sx2, sy1, sy2 = sx1 / Enlarge_Fac, sx2 / Enlarge_Fac, sy1 / Enlarge_Fac, sy2 / Enlarge_Fac
+			poly = Polygon([(sx1, sy1), (sx1, sy2), (sx2, sy2), (sx2, sy1)], fc=cm.Set2(float(i) / n_blocks))
+			ax.add_patch(poly)
+			# Display identifier of square i at its center
+			ax.text(float(sx1 + sx2) / 2, float(sy1 + sy2) / 2, self.BlockList[i].t.name, ha='center', va='center')
+		# ax.xaxis.set_major_locator(ticker.MultipleLocator(0.5))
+		# ax.yaxis.set_major_locator(ticker.MultipleLocator(0.5))
+		plt.margins(0)
+		plt.title(instance_name + ' scip ' + str(solve_time))
+		fig.savefig(result_directory + instance_name + '_scip_' + mode + '.png')
+		plt.show()
 
 	def init(self, NumMove=100):
 		self.tree = Tree(self.BlockList)
@@ -439,9 +501,12 @@ class FloorPlaner:
 			N_SOL_LIMIT = 1
 			model.setParam('limits/solutions', N_SOL_LIMIT)
 		elif mode == 'time-limit':
-			TIME_LIMIT = 1800
+			TIME_LIMIT = 3600 * 4
 			print('sovler time limit: ', TIME_LIMIT)
 			model.setParam('limits/time', TIME_LIMIT)
+
+		# model.setHeuristics(pyscipopt.SCIP_PARAMSETTING.AGGRESSIVE)
+		# model.setSeparating(pyscipopt.SCIP_PARAMSETTING.FAST)
 
 		# N_SOL_LIMIT = 1
 		# TIME_LIMIT = 3600
@@ -460,10 +525,6 @@ class FloorPlaner:
 		# msol.get_value_dict()
 
 		if msol:
-
-			import matplotlib.pyplot as plt
-			import matplotlib.cm as cm
-			from matplotlib.patches import Polygon
 			import matplotlib.ticker as ticker
 
 			# Plot external square
@@ -485,6 +546,8 @@ class FloorPlaner:
 				elif self.BlockList[i].type == 'softrectangular':
 					sz_i = 0
 					sx_i, sy_i, sw_i, sh_i = model.getSolVal(msol, vx[i]), model.getSolVal(msol, vy[i]), model.getSolVal(msol, BLOCK_WIDTH_LIST[i]), model.getSolVal(msol, BLOCK_HEIGHT_LIST[i])
+					self.BlockList[i].setX(sx_i)
+					self.BlockList[i].setY(sy_i)
 					self.BlockList[i].setWidth(sw_i)
 					self.BlockList[i].setHeight(sh_i)
 					BLOCK_WIDTH_LIST[i] = sw_i
@@ -495,10 +558,13 @@ class FloorPlaner:
 				self.BlockList[i].setY(sy_i)
 				# transform (rotation)
 				if sz_i:
+					r_i = True
+					self.BlockList[i].setRotate(r_i)
+
 					# exchange block width and height if rotate
-					w = self.BlockList[i].w
-					self.BlockList[i].setWidth(self.BlockList[i].h)
-					self.BlockList[i].setHeight(w)
+					# w = self.BlockList[i].w
+					# self.BlockList[i].setWidth(self.BlockList[i].h)
+					# self.BlockList[i].setHeight(w)
 
 					sx1, sx2, sy1, sy2 = sx_i, sx_i + BLOCK_HEIGHT_LIST[i], sy_i, sy_i + BLOCK_WIDTH_LIST[i]
 				else:
