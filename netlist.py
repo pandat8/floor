@@ -1,5 +1,3 @@
-
-
 class Terminal:
     def __init__(self, name, x=0, y=0):
         self.name = name
@@ -12,6 +10,7 @@ class Terminal:
     def setY(self, y):
         self.y = y
 
+
 class Block:
     def __init__(self, name, type, width, height):
         self.w = width
@@ -21,6 +20,7 @@ class Block:
         self.r = False
         self.type = type
         self.t = Terminal(name)
+        self.area = self.w * self.h
 
     def setX(self, x):
         self.x = x
@@ -35,6 +35,16 @@ class Block:
 
     def setHeight(self, h):
         self.h = h
+
+
+class SoftBlock(Block):
+
+    def __init__(self, name=None, type=None, width=1, height=1, area=1, min_ratio=1, max_ration=1):
+        super().__init__(name, type, width, height)
+        self.area = area
+        self.min_ratio = min_ratio
+        self.max_ratio = max_ration
+
 
 class Net:
     def __init__(self):

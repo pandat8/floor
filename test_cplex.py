@@ -12,18 +12,22 @@ from floorplaner import FloorPlaner
 random.seed(0)
 
 if __name__ == '__main__':
+	block_types = ['HARD', 'SOFT']
+	block_type = block_types[0]
 	modes = ['sol-limit', 'time-limit']
-	mode = modes[1]
+	mode = modes[0]
 	print('mode : ', mode)
+	instance_id = 'n10'
+	instance_name = block_type + '_' + instance_id
 
-	result_directory = './results/HARD/'
+	result_directory = './results/' + block_type + '/'
 	pathlib.Path(result_directory).mkdir(parents=True, exist_ok=True)
-	instance_name = 'n100'
-	print('case: hard ' + instance_name)
+
+	print('case: ', instance_name)
 	fp = FloorPlaner()
-	fp.readBlocks('./GSRCbench/HARD/' + instance_name + '.blocks')
-	fp.readPins('./GSRCbench/HARD/' + instance_name + '.pl')
-	fp.readNets('.//GSRCbench/HARD/' + instance_name + '.nets')
+	fp.readBlocks('./GSRCbench/' + block_type + '/' + instance_id + '.blocks')
+	fp.readPins('./GSRCbench/' + block_type + '/' + instance_id + '.pl')
+	fp.readNets('./GSRCbench/' + block_type + '/' + instance_id + '.nets')
 	fp.ILP_floorplan_cplex(instance_name=instance_name, result_directory=result_directory, mode=mode)
 
 	# fp.alpha = 0.5
